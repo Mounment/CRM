@@ -1,0 +1,129 @@
+{% extends 'king_admin/table_index.html' %}
+{% load tags %}
+
+
+{% block css %}
+<style type="text/css">
+    .filter-select-box-left{
+        height:160px!important;
+        width:120px;
+        margin-right:10px;
+        border-re
+    }
+ .filter-select-box-right{
+        height:160px!important;
+        width:120px;
+        margin-left:60px;
+    }
+</style>
+
+{% endblock %}
+
+
+
+{% block container %}
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <h3 class="panel-title">{% render_app_name admin_class %}</h3>
+        </div>
+
+        <div class="panel-body" style="margin-left:-110px">
+            <div class="row">
+            <form class="form-horizontal" role="form" method="post" onsubmit="return select_all_choose()">{% csrf_token %}
+                <div style="margin-left:60px;"><span style="color:red;margin-left:50px;">{{ form_obj.errors }}</span></div>
+                {% for field in form_obj %}
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" style="font-weight:normal">
+                            {% if field.field.required %}
+                                <b>{{ field.label }}</b>
+                            {% else %}
+                                {{ field.label }}
+                            {% endif %}
+                        </label>
+                        <div class="col-sm-5" style="width:340px">
+                            {% if field.name in admin_class.filter_horizontal %}
+{#                                实现和Django类似的复选框#}
+                                <div class="col-md-4">
+                                    {% get_m2m_tags  admin_class field form_obj as m2m_obj_tags%}
+                                    <select multiple class="filter-select-box-left" id="id_{{ field.name }}_from">
+                                        {% if field.name in admin_class.readonly_fields and not admin_class.is_add_form %}
+                                            {% for obj_tag in  m2m_obj_tags%}
+                                                <option disabled="disabled" value="{{ obj_tag.id }}">{{ obj_tag }}</option>
+                                            {% endfor %}
+                                        {% else %}
+                                            {% for obj_tag in  m2m_obj_tags%}
+                                                <option ondblclick="move_element(this,'id_{{ field.name }}_to','id_{{ field.name }}_from')" value="{{ obj_tag.id }}">{{ obj_tag }}</option>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    {% get_m2m_selected_tags form_obj field as select_tags%}
+                                    <select tag="choose_list" multiple name="{{ field.name }}"class="filter-select-box-right" id="id_{{ field.name }}_to">
+                                        {% if field.name in admin_class.readonly_fields and not admin_class.is_add_form %}
+                                            {% for obj_tag in  select_tags %}
+                                                <option disabled="disabled" value="{{ obj_tag.id }}">{{ obj_tag }}</option>
+                                            {% endfor %}
+                                        {% else %}
+                                            {% for obj_tag in  select_tags %}
+                                                <option ondblclick="move_element(this,'id_{{ field.name }}_from','id_{{ field.name }}_to')" value="{{ obj_tag.id }}">{{ obj_tag }}</option>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </select>
+                                </div>
+                                <span style="color:red">{{ field.errors }}</span>
+                            {% else %}
+                                {{ field }}
+                                {{ field.help_text }}
+                                <span style="color:red">{{ field.errors }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+                    {% if not admin_class.readonly_table %}
+                    <div class="form-group">
+
+                        <div class="col-sm-10 pull-right">
+
+                            <button type="submit"  class="btn btn-info ">保存</button>
+                            {% block obj_delete %}
+                            <a href="{% url 'table_obj_delete' app_name table_name form_obj.instance.id %}" class="btn btn-danger">删除</a>
+                            {% endblock %}
+                        </div>
+
+                    </div>
+                    {% endif %}
+            </form>
+        </div>
+    </div>
+    </div>
+{% endblock %}
+
+{% block bottom-js %}
+<script>
+    function move_element(ths,target_id,new_target_id){
+        //移动思路:删除左边当前标签,在右边添加当前标签
+        var opt_ele = "<option value='" + $(ths).val() + "' ondblclick=move_element(this,'"+new_target_id+"','"+target_id+"')>" + $(ths).text()+"</option>"
+
+        //$(ele).off().ondblclick();
+        //$(ele).appendTo("#"+target_id);
+        $('#'+target_id).append(opt_ele);
+        $(ths).remove();
+    }
+
+    function select_all_choose(){
+        $('select[tag="choose_list"] option').each(function(){
+            $(this).prop("selected",true);
+        });
+
+        //提交表单数据时候,去除form中的disabled的标签,以便后台可以接收到正确的数据,否则数据缺失,修改失败
+        $('form').find('[disabled]').removeAttr('disabled');
+
+
+        return true;
+    }
+
+</script>
+
+
+{% endblock %}
